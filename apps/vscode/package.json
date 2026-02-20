@@ -84,8 +84,50 @@
         "command": "niiVue.openFromExplorer",
         "title": "NiiVue: Open",
         "enablement": "!listMultiSelection"
+      },
+      {
+        "command": "wetlab.registerSpecimen",
+        "title": "Wet Lab: Register as Specimen",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "wetlab.showProvenance",
+        "title": "Wet Lab: Show Provenance",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "wetlab.addNote",
+        "title": "Wet Lab: Add Note",
+        "icon": "$(note)"
+      },
+      {
+        "command": "wetlab.removeSpecimen",
+        "title": "Wet Lab: Remove Specimen",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "wetlab.refresh",
+        "title": "Wet Lab: Refresh",
+        "icon": "$(refresh)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wetlab",
+          "title": "Digital Wet Lab",
+          "icon": "./media/wetlab-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "wetlab": [
+        {
+          "id": "wetlab.specimens",
+          "name": "Registered Specimens"
+        }
+      ]
+    },
     "customEditors": [
       {
         "viewType": "niiVue.default",
@@ -166,6 +208,35 @@
         {
           "command": "niiVue.openFromExplorer",
           "when": "!listMultiSelection"
+        },
+        {
+          "command": "wetlab.registerSpecimen",
+          "when": "!listMultiSelection",
+          "group": "wetlab@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "wetlab.refresh",
+          "when": "view == wetlab.specimens",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "wetlab.showProvenance",
+          "when": "view == wetlab.specimens && viewItem == wetlabSpecimen",
+          "group": "wetlab@1"
+        },
+        {
+          "command": "wetlab.addNote",
+          "when": "view == wetlab.specimens && viewItem == wetlabSpecimen",
+          "group": "wetlab@2"
+        },
+        {
+          "command": "wetlab.removeSpecimen",
+          "when": "view == wetlab.specimens && viewItem == wetlabSpecimen",
+          "group": "wetlab@3"
         }
       ]
     },
@@ -244,6 +315,11 @@
           "type": "string",
           "default": "hsv",
           "description": "Default colormap to use for mesh overlays."
+        },
+        "niivue.wetlab.autoRegister": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically register medical images as digital specimens in the Wet Lab registry when they are opened."
         }
       }
     }
