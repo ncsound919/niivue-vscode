@@ -57,9 +57,20 @@ export function registerWetLabChatParticipant(
     }
 
     // Use the LM API to answer more complex queries with specimen context
-    const models = await vscode.lm.selectChatModels({ family: 'gpt-4o' })
-    const model = models[0] ?? (await vscode.lm.selectChatModels())[0]
+    const config = vscode.workspace.getConfiguration('niivue.wetlab')
+    const preferredModelFamily = config.get<string | undefined>('preferredModelFamily')
 
+    let models: readonly vscode.LanguageModelChat[]
+    if (preferredModelFamily) {
+      models = await vscode.lm.selectChatModels({ family: preferredModelFamily })
+      if (models.length === 0) {
+        models = await vscode.lm.selectChatModels()
+      }
+    } else {
+      models = await vscode.lm.selectChatModels()
+    }
+
+    const model = models[0]
     if (!model) {
       response.markdown(
         '⚠️ No language model is available. Please install GitHub Copilot or another LLM extension.',
