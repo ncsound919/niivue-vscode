@@ -4,10 +4,10 @@ import { LinkHoverProvider } from './HoverProvider'
 import { SpecimenRegistry } from './wetlab/registry'
 import { SpecimenTreeItem, WetLabTreeProvider } from './wetlab/treeProvider'
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   // --- Digital Wet Lab: registry + sidebar ---
   const registry = new SpecimenRegistry(context)
-  registry.load()
+  await registry.load()
 
   const treeProvider = new WetLabTreeProvider(registry)
   context.subscriptions.push(
