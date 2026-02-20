@@ -226,7 +226,7 @@ export function parseMetadataQuery(query: string): MetadataCondition[] {
 export function evaluateMetadataQuery(nv: Niivue, query: string): boolean {
   if (!query.trim()) return true
   const conditions = parseMetadataQuery(query)
-  if (conditions.length === 0) return true
+  if (conditions.length === 0) return false
 
   const meta: Record<string, any> =
     (nv?.volumes?.length ?? 0) > 0 ? (nv.volumes[0].getImageMetadata() ?? {}) : {}
