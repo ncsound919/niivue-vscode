@@ -23,12 +23,25 @@ export function registerWetLabChatParticipant(
   ): Promise<void> => {
     const prompt = request.prompt.trim().toLowerCase()
 
+    // Show a helpful introduction when the user hasn't typed anything yet
+    if (prompt === '') {
+      response.markdown(
+        '### Digital Wet Lab — Specimen Assistant\n\n' +
+          'Ask me about registered specimens, provenance, or Digital Wet Lab operations.\n\n' +
+          '- Type **"list specimens"** to see all registered specimens.\n' +
+          '- Ask about a specific specimen by name to get details and provenance.\n' +
+          '- Describe an operation or analysis you want to perform on a specimen.\n\n' +
+          'To register a new specimen, right-click a medical-imaging file in the Explorer and choose ' +
+          '**Wet Lab: Register as Specimen**, or run the `wetlab.registerSpecimen` command.',
+      )
+      return
+    }
+
     // Fast-path: plain provenance / list queries answered without an LLM round-trip
     if (
       prompt.includes('list') ||
       prompt.includes('show all') ||
-      prompt.includes('what specimens') ||
-      prompt === ''
+      prompt.includes('what specimens')
     ) {
       const specimens = registry.list()
       if (specimens.length === 0) {
