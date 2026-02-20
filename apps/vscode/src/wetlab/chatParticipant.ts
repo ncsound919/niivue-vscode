@@ -28,11 +28,12 @@ export function registerWetLabChatParticipant(
 
     // Handle declared slash commands explicitly via request.command
     const isListCommand =
+    const isListCommand =
       request.command === 'list' ||
-      prompt.includes('list') ||
-      prompt.includes('show all') ||
-      prompt.includes('what specimens')
-
+      (!request.command &&
+        (prompt.includes('list') ||
+          prompt.includes('show all') ||
+          prompt.includes('what specimens')))
     const isProvenanceCommand = request.command === 'provenance'
 
     // Show a helpful introduction when the user hasn't typed anything yet
