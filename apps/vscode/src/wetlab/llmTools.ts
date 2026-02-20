@@ -144,16 +144,47 @@ export class AddNoteTool implements vscode.LanguageModelTool<AddNoteInput> {
     options: vscode.LanguageModelToolInvocationOptions<AddNoteInput>,
     _token: vscode.CancellationToken,
   ): Promise<vscode.LanguageModelToolResult> {
-    const query = options.input.specimenName.toLowerCase()
+    const query = options.input.specimenName.trim().toLowerCase()
     const specimens = this.registry.list()
-    const match = specimens.find(
-      (s) => s.name.toLowerCase().includes(query) || s.uri.toLowerCase().includes(query),
-    )
 
-    if (!match) {
+    // Prefer exact (case-insensitive) matches on name or URI
+    const exactMatches = specimens.filter((s) => {
+      const name = s.name.toLowerCase()
+      const uri = s.uri.toLowerCase()
+      return name === query || uri === query
+    })
+
+    let match = null as (typeof specimens)[number] | null
+
+    if (exactMatches.length === 1) {
+      match = exactMatches[0]
+    } else if (exactMatches.length > 1) {
+      const candidates = exactMatches.map((s) => `- ${s.name} (${s.uri})`).join('\n')
       return makeTextResult(
-        `No specimen found matching "${options.input.specimenName}". Use the wetlab_listSpecimens tool to see all registered specimens.`,
+        `Multiple specimens match "${options.input.specimenName}" exactly:\n\n${candidates}\n\n` +
+          'Please specify a more precise specimen name or URI.',
       )
+    } else {
+      // Fallback to partial (substring) matches when there is no exact match
+      const partialMatches = specimens.filter((s) => {
+        const name = s.name.toLowerCase()
+        const uri = s.uri.toLowerCase()
+        return name.includes(query) || uri.includes(query)
+      })
+
+      if (partialMatches.length === 1) {
+        match = partialMatches[0]
+      } else if (partialMatches.length === 0) {
+        return makeTextResult(
+          `No specimen found matching "${options.input.specimenName}". Use the wetlab_listSpecimens tool to see all registered specimens.`,
+        )
+      } else {
+        const candidates = partialMatches.map((s) => `- ${s.name} (${s.uri})`).join('\n')
+        return makeTextResult(
+          `Multiple specimens match "${options.input.specimenName}":\n\n${candidates}\n\n` +
+            'Please specify a more precise specimen name or URI.',
+        )
+      }
     }
 
     await this.registry.addNote(match.id, options.input.note)
