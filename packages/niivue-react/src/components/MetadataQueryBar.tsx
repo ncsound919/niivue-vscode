@@ -20,23 +20,23 @@ interface MetadataQueryBarProps {
  * Clearing the query restores all volumes to full opacity in the list.
  */
 export const MetadataQueryBar = ({ nvArray, visible }: MetadataQueryBarProps) => {
+  // useSignal is a Preact hook — must be called unconditionally before any early returns
+  const query = useSignal('')
+
   if (!visible.value) return null
 
-  const query = useSignal('')
-  const error = useSignal('')
-
-  const results = computed(() => {
-    error.value = ''
-    if (!query.value.trim()) return nvArray.value.map(() => true)
+  // Combine error and results into one computation to avoid side effects inside computed
+  const queryResult = computed(() => {
+    const q = query.value.trim()
+    if (!q) return { error: '', results: nvArray.value.map(() => true) }
     try {
-      return nvArray.value.map((nv) => evaluateMetadataQuery(nv, query.value))
+      return { error: '', results: nvArray.value.map((nv) => evaluateMetadataQuery(nv, q)) }
     } catch {
-      error.value = 'Invalid query'
-      return nvArray.value.map(() => false)
+      return { error: 'Invalid query', results: nvArray.value.map(() => false) }
     }
   })
 
-  const matchCount = computed(() => results.value.filter(Boolean).length)
+  const matchCount = computed(() => queryResult.value.results.filter(Boolean).length)
 
   const getName = (nv: ExtendedNiivue) =>
     decodeURIComponent(
@@ -71,8 +71,10 @@ export const MetadataQueryBar = ({ nvArray, visible }: MetadataQueryBarProps) =>
           Close
         </button>
       </div>
-      {error.value && <p className="text-xs text-red-400">{error.value}</p>}
-      {query.value.trim() && !error.value && (
+      {queryResult.value.error && (
+        <p className="text-xs text-red-400">{queryResult.value.error}</p>
+      )}
+      {query.value.trim() && !queryResult.value.error && (
         <p className="text-xs text-gray-300">
           {matchCount.value} / {nvArray.value.length} {matchCount.value === 1 ? 'match' : 'matches'}
         </p>
@@ -83,11 +85,11 @@ export const MetadataQueryBar = ({ nvArray, visible }: MetadataQueryBarProps) =>
             <li
               key={i}
               className={`truncate px-1 rounded ${
-                results.value[i] ? 'text-green-300' : 'text-gray-500'
+                queryResult.value.results[i] ? 'text-green-300' : 'text-gray-500'
               }`}
               title={getName(nv)}
             >
-              {results.value[i] ? '✓' : '✗'} {getName(nv)}
+              {queryResult.value.results[i] ? '✓' : '✗'} {getName(nv)}
             </li>
           ))}
         </ul>

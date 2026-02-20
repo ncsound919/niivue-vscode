@@ -226,7 +226,9 @@ export function parseMetadataQuery(query: string): MetadataCondition[] {
 export function evaluateMetadataQuery(nv: Niivue, query: string): boolean {
   if (!query.trim()) return true
   const conditions = parseMetadataQuery(query)
-  if (conditions.length === 0) return false
+  // When no conditions can be parsed from a non-empty query (incomplete or malformed),
+  // return true so the volume is not silently hidden while the user is still typing.
+  if (conditions.length === 0) return true
 
   const meta: Record<string, any> =
     (nv?.volumes?.length ?? 0) > 0 ? (nv.volumes[0].getImageMetadata() ?? {}) : {}
