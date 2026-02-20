@@ -3,7 +3,7 @@ import { SpecimenRegistry } from './registry'
 import { WetLabTreeProvider } from './treeProvider'
 
 /** Input schema for the list-specimens tool (no parameters needed) */
-type ListSpecimensInput = Record<string, never>
+interface ListSpecimensInput {}
 
 /** Input schema for get-provenance tool */
 interface GetProvenanceInput {
