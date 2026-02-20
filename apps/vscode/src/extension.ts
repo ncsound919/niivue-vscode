@@ -5,6 +5,9 @@ import { SpecimenRegistry } from './wetlab/registry'
 import { SpecimenTreeItem, WetLabTreeProvider } from './wetlab/treeProvider'
 import { registerWetLabTools } from './wetlab/llmTools'
 import { registerWetLabChatParticipant } from './wetlab/chatParticipant'
+import { HardwareDevice } from './wetlab/hardwareCatalog'
+import { DeviceConnectionConfig, HardwareManager } from './wetlab/hardwareManager'
+import { HardwareTreeItem, HardwareTreeProvider } from './wetlab/hardwareTreeProvider'
 
 export async function activate(context: vscode.ExtensionContext) {
   // --- Digital Wet Lab: registry + sidebar ---
@@ -14,6 +17,191 @@ export async function activate(context: vscode.ExtensionContext) {
   const treeProvider = new WetLabTreeProvider(registry)
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('wetlab.specimens', treeProvider),
+  )
+
+  // --- Hardware Catalog tree view ---
+  const hardwareManager = new HardwareManager(registry)
+  context.subscriptions.push(hardwareManager)
+
+  const hardwareTreeProvider = new HardwareTreeProvider(hardwareManager)
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('wetlab.hardware', hardwareTreeProvider),
+  )
+
+  // Single shared output channel for all hardware detail/status output
+  const hardwareChannel = vscode.window.createOutputChannel('Wet Lab Hardware')
+  context.subscriptions.push(hardwareChannel)
+
+  // Show hardware device details in the shared output channel
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'wetlab.showHardwareDetails',
+      (device: HardwareDevice | undefined) => {
+        if (!device) {
+          return
+        }
+        const guide = device.implementationGuide
+        const state = hardwareManager.getState(device.id)
+        const statusLine = state?.connected
+          ? `Status:     ✅ Connected (${state.specimenCount} specimen(s) acquired)`
+          : `Status:     ○  Disconnected`
+        const lines: string[] = [
+          `🔧  Hardware Device: ${device.name} (${device.id})`,
+          `${'─'.repeat(60)}`,
+          `Category:   ${device.category}`,
+          statusLine,
+          ``,
+          `Description:`,
+          `  ${device.description}`,
+          ``,
+          `Supported Platforms:`,
+          ...device.supportedPlatforms.map((p) => `  • ${p}`),
+          ``,
+          `Key Tools:`,
+          ...device.keyTools.map((t) => `  • ${t}`),
+          `${'─'.repeat(60)}`,
+          `Prerequisites:`,
+          ...guide.prerequisites.map((p) => `  • ${p}`),
+          ``,
+          `Setup Steps:`,
+          ...guide.steps.map((s) => `  ${s}`),
+          ``,
+          `Code Example:`,
+          `  ${guide.codeExample}`,
+          ``,
+          `Overlay365 Integration:`,
+          `  ${guide.overlay365Integration}`,
+        ]
+        hardwareChannel.clear()
+        lines.forEach((l) => hardwareChannel.appendLine(l))
+        hardwareChannel.show(true)
+      },
+    ),
+  )
+
+  // Connect a hardware device (prompt for method + folder/URL)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'wetlab.hardware.connect',
+      async (item: HardwareTreeItem | undefined) => {
+        const device =
+          item?.node.kind === 'device' ? item.node.device : undefined
+        if (!device) {
+          return
+        }
+        const method = await vscode.window.showQuickPick(
+          [
+            {
+              label: '$(folder-opened) Folder Watcher',
+              description: 'Watch a folder for new files (gPhoto2, Pycro-Manager, etc.)',
+              value: 'folder-watcher' as const,
+            },
+            {
+              label: '$(globe) HTTP REST',
+              description: 'Connect to a REST API device (OpenFlexure, ImSwitch)',
+              value: 'http-rest' as const,
+            },
+            {
+              label: '$(terminal) CLI',
+              description: 'Run a capture command in the terminal + watch output folder',
+              value: 'cli' as const,
+            },
+          ],
+          { title: `Connect ${device.name}`, placeHolder: 'Select acquisition method' },
+        )
+        if (!method) {
+          return
+        }
+
+        const config: DeviceConnectionConfig = { method: method.value }
+
+        if (method.value === 'folder-watcher' || method.value === 'cli') {
+          const folders = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: 'Select Watch Folder',
+            title: `Watch folder for ${device.name} output`,
+          })
+          if (!folders?.[0]) {
+            return
+          }
+          config.watchFolder = folders[0].fsPath
+        }
+
+        if (method.value === 'cli') {
+          const cmd = await vscode.window.showInputBox({
+            prompt: `Capture command for ${device.name}`,
+            placeHolder: device.implementationGuide.codeExample,
+            value: device.implementationGuide.codeExample,
+          })
+          if (!cmd) {
+            return
+          }
+          config.cliCommand = cmd
+        }
+
+        if (method.value === 'http-rest') {
+          const url = await vscode.window.showInputBox({
+            prompt: `REST API base URL for ${device.name}`,
+            placeHolder: 'http://openflexure.local',
+          })
+          if (!url) {
+            return
+          }
+          config.restUrl = url
+        }
+
+        try {
+          await hardwareManager.connect(device.id, config)
+          vscode.window.showInformationMessage(
+            `🔌 ${device.name} connected via ${method.value}.`,
+          )
+        } catch (err) {
+          vscode.window.showErrorMessage(
+            `Failed to connect ${device.name}: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
+      },
+    ),
+  )
+
+  // Disconnect a hardware device
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'wetlab.hardware.disconnect',
+      (item: HardwareTreeItem | undefined) => {
+        const device =
+          item?.node.kind === 'device' ? item.node.device : undefined
+        if (!device) {
+          return
+        }
+        hardwareManager.disconnect(device.id)
+        vscode.window.showInformationMessage(`🔌 ${device.name} disconnected.`)
+      },
+    ),
+  )
+
+  // Acquire from a connected hardware device
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'wetlab.hardware.acquire',
+      async (item: HardwareTreeItem | undefined) => {
+        const device =
+          item?.node.kind === 'device' ? item.node.device : undefined
+        if (!device) {
+          return
+        }
+        try {
+          await hardwareManager.acquire(device.id)
+          treeProvider.refresh()
+        } catch (err) {
+          vscode.window.showErrorMessage(
+            `Acquisition failed for ${device.name}: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
+      },
+    ),
   )
 
   // Register the current file as a digital specimen
