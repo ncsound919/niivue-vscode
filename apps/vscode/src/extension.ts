@@ -3,6 +3,8 @@ import { NiiVueEditorProvider } from './editorProvider'
 import { LinkHoverProvider } from './HoverProvider'
 import { SpecimenRegistry } from './wetlab/registry'
 import { SpecimenTreeItem, WetLabTreeProvider } from './wetlab/treeProvider'
+import { HardwareDevice } from './wetlab/hardwareCatalog'
+import { HardwareTreeProvider } from './wetlab/hardwareTreeProvider'
 
 export async function activate(context: vscode.ExtensionContext) {
   // --- Digital Wet Lab: registry + sidebar ---
@@ -12,6 +14,55 @@ export async function activate(context: vscode.ExtensionContext) {
   const treeProvider = new WetLabTreeProvider(registry)
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('wetlab.specimens', treeProvider),
+  )
+
+  // --- Hardware Catalog tree view ---
+  const hardwareTreeProvider = new HardwareTreeProvider()
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('wetlab.hardware', hardwareTreeProvider),
+  )
+
+  // Show hardware device details in an output channel
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'wetlab.showHardwareDetails',
+      (device: HardwareDevice | undefined) => {
+        if (!device) {
+          return
+        }
+        const guide = device.implementationGuide
+        const lines: string[] = [
+          `🔧  Hardware Device: ${device.name} (${device.id})`,
+          `${'─'.repeat(60)}`,
+          `Category:   ${device.category}`,
+          ``,
+          `Description:`,
+          `  ${device.description}`,
+          ``,
+          `Supported Platforms:`,
+          ...device.supportedPlatforms.map((p) => `  • ${p}`),
+          ``,
+          `Key Tools:`,
+          ...device.keyTools.map((t) => `  • ${t}`),
+          `${'─'.repeat(60)}`,
+          `Prerequisites:`,
+          ...guide.prerequisites.map((p) => `  • ${p}`),
+          ``,
+          `Setup Steps:`,
+          ...guide.steps.map((s) => `  ${s}`),
+          ``,
+          `Code Example:`,
+          `  ${guide.codeExample}`,
+          ``,
+          `Overlay365 Integration:`,
+          `  ${guide.overlay365Integration}`,
+        ]
+        const channel = vscode.window.createOutputChannel('Wet Lab Hardware')
+        channel.clear()
+        lines.forEach((l) => channel.appendLine(l))
+        channel.show(true)
+      },
+    ),
   )
 
   // Register the current file as a digital specimen

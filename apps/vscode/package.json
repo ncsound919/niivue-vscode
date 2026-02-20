@@ -109,6 +109,11 @@
         "command": "wetlab.refresh",
         "title": "Wet Lab: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "wetlab.showHardwareDetails",
+        "title": "Wet Lab: Show Hardware Details",
+        "icon": "$(circuit-board)"
       }
     ],
     "viewsContainers": {
@@ -125,6 +130,10 @@
         {
           "id": "wetlab.specimens",
           "name": "Registered Specimens"
+        },
+        {
+          "id": "wetlab.hardware",
+          "name": "Hardware Catalog"
         }
       ]
     },
