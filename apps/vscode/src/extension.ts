@@ -34,8 +34,19 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Open a registered specimen by its URI string (called from the tree view)
   context.subscriptions.push(
-    vscode.commands.registerCommand('wetlab.openSpecimen', async (uriString: string) => {
-      const uri = vscode.Uri.parse(uriString)
+    vscode.commands.registerCommand('wetlab.openSpecimen', async (uriString?: unknown) => {
+      if (typeof uriString !== 'string' || !uriString.trim()) {
+        vscode.window.showWarningMessage('No specimen URI provided to open.')
+        return
+      }
+
+      let uri: vscode.Uri
+      try {
+        uri = vscode.Uri.parse(uriString)
+      } catch (error) {
+        vscode.window.showErrorMessage(`Invalid specimen URI: ${uriString}`)
+        return
+      }
       vscode.commands.executeCommand('vscode.openWith', uri, 'niiVue.default')
     }),
   )
