@@ -1,0 +1,185 @@
+{
+  "project": "Digital Wet Lab for Overlay365",
+  "goal": "Data-driven visualization replacing physical subjects with media",
+  "coreInfrastructure": {
+    "virtualSpecimen": {
+      "description": "Centralized Media Asset Management (MAM) system treating media as raw data points.",
+      "components": [
+        {
+          "name": "Macro-High Speed Imaging",
+          "description": "4K/60fps footage for chemical reactions or biological movements, enabling frame-by-frame analysis.",
+          "openSourceTools": [
+            "OpenCV for frame extraction and analysis",
+            "FFmpeg for video processing",
+            "Python with scikit-image"
+          ],
+          "openDataSources": [
+            "Sample 4K microscopy datasets from Broad Bioimage Benchmark Collection (BBBC)"
+          ]
+        },
+        {
+          "name": "Time-Lapse Integration",
+          "description": "Essential for cellular growth or decomposition studies.",
+          "openSourceTools": [
+            "ImageJ/Fiji for time-lapse analysis",
+            "CellProfiler for high-throughput image analysis",
+            "FFmpeg for video assembly"
+          ],
+          "openDataSources": [
+            "Allen Cell Explorer time-lapse data",
+            "Cell Image Library"
+          ]
+        },
+        {
+          "name": "Thermal & Spectral Overlays",
+          "description": "Infrared video to simulate heat signatures or blood flow, and spectral imaging.",
+          "openSourceTools": [
+            "GDAL for spectral image processing",
+            "Orfeo ToolBox for remote sensing",
+            "Python libraries: spectral, matplotlib",
+            "OpenCV for thermal image analysis"
+          ],
+          "openDataSources": [
+            "NASA JPL ASTER spectral library",
+            "FLIR thermal image datasets (some open)"
+          ]
+        },
+        {
+          "name": "Standardized Calibration",
+          "description": "Digital scale bar or color calibration card for consistency across lighting.",
+          "openSourceTools": [
+            "OpenCV camera calibration module",
+            "Colour-Science for color calibration",
+            "RawTherapee for color management"
+          ],
+          "openDataSources": [
+            "ColorChecker datasets",
+            "Camera calibration patterns"
+          ]
+        }
+      ]
+    }
+  },
+  "strategicTakeaways": [
+    {
+      "takeaway": "Non-Destructive Testing",
+      "description": "Digital subjects allow infinite experiment resets, removing cost of physical reagents.",
+      "openSourceTools": [
+        "Version control for data: DVC (Data Version Control)",
+        "Git LFS",
+        "Reproducible analysis with Jupyter notebooks and Binder"
+      ]
+    },
+    {
+      "takeaway": "Automated Feature Extraction",
+      "description": "Use Computer Vision to automatically track changes in videos (e.g., cell count, color titration).",
+      "openSourceTools": [
+        "OpenCV",
+        "scikit-image",
+        "TensorFlow/PyTorch for deep learning-based segmentation (e.g., U-Net)",
+        "CellProfiler",
+        "TrackMate (Fiji plugin)"
+      ],
+      "openDataSources": [
+        "Kaggle datasets for cell counting",
+        "Medical segmentation datasets (e.g., LiTS, BraTS)"
+      ]
+    },
+    {
+      "takeaway": "Global Collaboration",
+      "description": "Digital lab allows analytics team to review 'wet' results simultaneously from any location.",
+      "openSourceTools": [
+        "Nextcloud or ownCloud for file sharing",
+        "JupyterHub for collaborative analysis",
+        "Octave (open source MATLAB alternative)",
+        "RStudio Server",
+        "Jitsi for video conferencing"
+      ]
+    }
+  ],
+  "techStackTrends": [
+    {
+      "trend": "Synthetic Data Generation",
+      "description": "Using GANs to create synthetic wet lab footage to train AI models when real-world samples are scarce.",
+      "openSourceTools": [
+        "TensorFlow/GANs",
+        "PyTorch/GANs (e.g., StyleGAN2-ADA)",
+        "Blender for 3D synthetic image generation",
+        "Unreal Engine (source available) for photorealistic rendering"
+      ],
+      "openDataSources": [
+        "Pretrained GAN models on TensorFlow Hub",
+        "Synthetic datasets from OpenDataVault"
+      ]
+    },
+    {
+      "trend": "Digital Twins",
+      "description": "Creating a 'Digital Twin' of the specimen, where video acts as visual skin over a mathematical model.",
+      "openSourceTools": [
+        "Eclipse Ditto for IoT digital twins",
+        "OpenModelica for physical modeling",
+        "PhysiCell for multicellular biological simulations",
+        "OpenSim for biomechanics",
+        "3D Slicer for medical image computing"
+      ],
+      "openDataSources": [
+        "Virtual Physiological Human datasets",
+        "OpenSim models"
+      ]
+    }
+  ],
+  "executionSummary": {
+    "phases": [
+      {
+        "phase": "Capture",
+        "action": "Setup 8K macro rigs with controlled lighting.",
+        "outcome": "High-fidelity raw data.",
+        "openSourceTools": [
+          "OpenCV camera control",
+          "gPhoto2 for DSLR control",
+          "FFmpeg for recording",
+          "Arduino + open source firmware for lighting control"
+        ]
+      },
+      {
+        "phase": "Annotate",
+        "action": "Use AI to label frames (e.g., 'T-cell contact').",
+        "outcome": "Searchable, queryable media.",
+        "openSourceTools": [
+          "CVAT (Computer Vision Annotation Tool)",
+          "LabelImg",
+          "VGG Image Annotator (VIA)",
+          "ModAL for active learning"
+        ],
+        "openDataSources": [
+          "Pretrained models from TensorFlow Model Zoo, PyTorch Hub"
+        ]
+      },
+      {
+        "phase": "Analyze",
+        "action": "Run pixel-change detection algorithms.",
+        "outcome": "Quantitative data from visual sources.",
+        "openSourceTools": [
+          "OpenCV for optical flow",
+          "scikit-image for change detection",
+          "Python with numpy/scipy",
+          "R with EBImage",
+          "PyTorch for deep learning change detection"
+        ]
+      },
+      {
+        "phase": "Archive",
+        "action": "Cloud-based version control for video assets.",
+        "outcome": "Audit-ready experiment history.",
+        "openSourceTools": [
+          "DVC (Data Version Control)",
+          "Git LFS",
+          "Nextcloud with versioning",
+          "Dat (Hypercore) for dataset versioning",
+          "Zenodo for archiving (open repository)"
+        ]
+      }
+    ]
+  },
+  "openSourceEcosystemSummary": "The digital wet lab can be built entirely with open source tools for capture, annotation, analysis, and archiving, leveraging open datasets for training and validation. This ensures cost-effectiveness, transparency, and community-driven innovation."
+}
