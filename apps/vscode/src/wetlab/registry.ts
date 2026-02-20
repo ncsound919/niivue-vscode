@@ -49,7 +49,7 @@ export class SpecimenRegistry {
 
   async register(uri: vscode.Uri, tags: string[] = []): Promise<SpecimenEntry> {
     const name = uri.path.split('/').pop() ?? uri.toString()
-    const id = crypto.createHash('md5').update(uri.toString()).digest('hex')
+    const id = crypto.createHash('sha256').update(uri.toString()).digest('hex')
 
     let fileSizeBytes: number | undefined
     let sha256: string | undefined
