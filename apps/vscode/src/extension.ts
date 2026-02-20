@@ -3,8 +3,8 @@ import { NiiVueEditorProvider } from './editorProvider'
 import { LinkHoverProvider } from './HoverProvider'
 import { SpecimenRegistry } from './wetlab/registry'
 import { SpecimenTreeItem, WetLabTreeProvider } from './wetlab/treeProvider'
-import { HardwareDevice } from './wetlab/hardwareCatalog'
-import { HardwareTreeProvider } from './wetlab/hardwareTreeProvider'
+import { registerWetLabTools } from './wetlab/llmTools'
+import { registerWetLabChatParticipant } from './wetlab/chatParticipant'
 
 export async function activate(context: vscode.ExtensionContext) {
   // --- Digital Wet Lab: registry + sidebar ---
@@ -188,6 +188,12 @@ export async function activate(context: vscode.ExtensionContext) {
       treeProvider.refresh()
     }),
   )
+
+  // Register LM tools so AI agents can call wet lab operations
+  context.subscriptions.push(registerWetLabTools(registry, treeProvider))
+
+  // Register the @wetlab chat participant
+  context.subscriptions.push(registerWetLabChatParticipant(registry))
 
   // Pass the registry to the editor provider for auto-registration on open
   NiiVueEditorProvider.setRegistry(registry, treeProvider)
