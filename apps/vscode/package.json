@@ -15,7 +15,7 @@
   },
   "homepage": "https://github.com/niivue",
   "engines": {
-    "vscode": "^1.70.0"
+    "vscode": "^1.95.0"
   },
   "license": "BSD-2-Clause",
   "categories": [
@@ -60,7 +60,7 @@
     "publish": "pnpm run build && vsce publish"
   },
   "devDependencies": {
-    "@types/vscode": "1.70.0",
+    "@types/vscode": "1.95.0",
     "@vscode/vsce": "^3.6.2",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
@@ -320,9 +320,97 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically register medical images as digital specimens in the Wet Lab registry when they are opened."
+        },
+        "niivue.wetlab.preferredModelFamily": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred language model family to use for the @wetlab chat participant (e.g. 'gpt-4o', 'claude-sonnet'). Leave empty to use the first available model."
         }
       }
-    }
+    },
+    "chatParticipants": [
+      {
+        "id": "niivue.wetlab",
+        "name": "wetlab",
+        "fullName": "Digital Wet Lab",
+        "description": "Ask about registered specimens, provenance, and Digital Wet Lab operations.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "list",
+            "description": "List all registered specimens"
+          },
+          {
+            "name": "provenance",
+            "description": "Show the provenance chain for a specimen"
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "wetlab_listSpecimens",
+        "tags": ["wetlab", "specimens", "neuroimaging"],
+        "displayName": "Wet Lab: List Specimens",
+        "modelDescription": "Lists all digital specimens registered in the NiiVue Digital Wet Lab, including file names, sizes, SHA-256 checksums, tags, and registration dates.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "wetlab_getProvenance",
+        "tags": ["wetlab", "provenance", "neuroimaging"],
+        "displayName": "Wet Lab: Get Provenance",
+        "modelDescription": "Returns the full provenance chain (history of actions and notes) for a registered specimen, identified by name or URI fragment.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "specimenName": {
+              "type": "string",
+              "description": "The file name or partial URI of the specimen to query."
+            }
+          },
+          "required": ["specimenName"]
+        }
+      },
+      {
+        "name": "wetlab_addNote",
+        "tags": ["wetlab", "provenance", "neuroimaging"],
+        "displayName": "Wet Lab: Add Note",
+        "modelDescription": "Adds a free-text provenance note to a registered specimen. Requires user confirmation before writing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "specimenName": {
+              "type": "string",
+              "description": "The file name or partial URI of the specimen."
+            },
+            "note": {
+              "type": "string",
+              "description": "The note text to append to the specimen's provenance history."
+            }
+          },
+          "required": ["specimenName", "note"]
+        }
+      },
+      {
+        "name": "wetlab_registerSpecimen",
+        "tags": ["wetlab", "specimens", "neuroimaging"],
+        "displayName": "Wet Lab: Register Specimen",
+        "modelDescription": "Registers a medical-imaging file (NIfTI, DICOM, etc.) as a digital specimen in the Wet Lab registry. Requires user confirmation before writing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "The absolute file path or file:// URI of the image file to register."
+            }
+          },
+          "required": ["filePath"]
+        }
+      }
+    ]
   },
   "capabilities": {
     "untrustedWorkspaces": {
