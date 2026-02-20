@@ -1,8 +1,19 @@
 import * as vscode from 'vscode'
 import { NiiVueDocument } from './document'
 import { getHtmlForWebview } from './html'
+import { SpecimenRegistry } from './wetlab/registry'
+import { WetLabTreeProvider } from './wetlab/treeProvider'
 
 export class NiiVueEditorProvider implements vscode.CustomReadonlyEditorProvider<NiiVueDocument> {
+  private static _registry: SpecimenRegistry | undefined
+  private static _treeProvider: WetLabTreeProvider | undefined
+
+  /** Called from extension.ts once the registry is ready */
+  public static setRegistry(registry: SpecimenRegistry, treeProvider: WetLabTreeProvider): void {
+    NiiVueEditorProvider._registry = registry
+    NiiVueEditorProvider._treeProvider = treeProvider
+  }
+
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
       NiiVueEditorProvider.viewType,
@@ -23,6 +34,20 @@ export class NiiVueEditorProvider implements vscode.CustomReadonlyEditorProvider
 
   async openCustomDocument(uri: vscode.Uri): Promise<NiiVueDocument> {
     console.log(`Opening document ${uri}`)
+    const config = vscode.workspace.getConfiguration('niivue')
+    if (config.get<boolean>('wetlab.autoRegister', true) && NiiVueEditorProvider._registry) {
+      NiiVueEditorProvider._registry
+        .register(uri)
+        .then(() => {
+          NiiVueEditorProvider._treeProvider?.refresh()
+        })
+        .catch((error) => {
+          console.error('Failed to auto-register specimen for wetlab view:', error)
+          void vscode.window.showWarningMessage(
+            'Failed to auto-register specimen for wetlab view. See extension logs for details.',
+          )
+        })
+    }
     return new NiiVueDocument(uri)
   }
 
