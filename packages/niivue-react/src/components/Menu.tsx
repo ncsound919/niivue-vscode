@@ -5,6 +5,8 @@ import {
   addDcmFolderEvent,
   addImagesEvent,
   addOverlayEvent,
+  exportSceneReport,
+  getSceneStateURL,
   openImageFromURL,
 } from '../events'
 import { getMetadataString, getNumberOfPoints } from '../utility'
@@ -20,7 +22,9 @@ import {
   ToggleEntry,
   toggle,
 } from './MenuElements'
+import { MetadataQueryBar } from './MetadataQueryBar'
 import { ScalingBox } from './ScalingBox'
+import { SpectralLayerManager } from './SpectralLayerManager'
 
 export const Menu = (props: AppProps) => {
   const { selection, selectionMode, nvArray, sliceType, hideUI, settings } = props
@@ -38,6 +42,8 @@ export const Menu = (props: AppProps) => {
   const zoomDragMode = useSignal(settings.value.zoomDragMode)
   const selectionActive = useSignal(false)
   const selectMultiple = useSignal(false)
+  const spectralManagerVisible = useSignal(false)
+  const metadataQueryVisible = useSignal(false)
 
   // Computed
   const isOverlay = computed(() => nvArraySelected.value[0]?.volumes?.length > 1)
@@ -239,6 +245,19 @@ export const Menu = (props: AppProps) => {
     alert('Settings saved!')
   }
 
+  const exportReport = () => {
+    exportSceneReport(nvArray.value)
+  }
+
+  const shareURL = () => {
+    const url = getSceneStateURL(props)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => alert('Scene URL copied to clipboard!'))
+    } else {
+      prompt('Copy this scene URL:', url)
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-baseline gap-2">
@@ -303,11 +322,32 @@ export const Menu = (props: AppProps) => {
             <MenuEntry label="Remove" onClick={removeLastVolume} visible={isOverlay} />
           </MenuItem>
         )}
+        {settings.value.menuItems?.spectralManager && (
+          <MenuItem
+            label="Layers"
+            onClick={toggle(spectralManagerVisible)}
+            visible={isVolumeOrMesh}
+          >
+            <MenuEntry label="Open Layer Manager" onClick={toggle(spectralManagerVisible)} />
+          </MenuItem>
+        )}
         {settings.value.menuItems?.header && (
           <MenuItem label="Header" onClick={toggle(headerDialog)} visible={isVolume}>
             <MenuEntry label="Set Headers to 1" onClick={setVoxelSize1AndOrigin0} />
             <MenuEntry label="Set Header" onClick={toggle(setHeaderMenu)} />
           </MenuItem>
+        )}
+        {settings.value.menuItems?.export && (
+          <MenuItem label="Export" onClick={exportReport} visible={isVolumeOrMesh}>
+            <MenuEntry label="Report + Screenshots" onClick={exportReport} />
+            {!isVscode && <MenuEntry label="Copy Scene URL" onClick={shareURL} />}
+          </MenuItem>
+        )}
+        {settings.value.menuItems?.metadataQuery && (
+          <MenuButton
+            label="Query"
+            onClick={toggle(metadataQueryVisible)}
+          />
         )}
         <ImageSelect label="Select" state={selectionActive} visible={multipleVolumes}>
           <ToggleEntry label="Multiple" state={selectMultiple} />
@@ -315,6 +355,9 @@ export const Menu = (props: AppProps) => {
         </ImageSelect>
       </div>
       <p className="pl-2">{displayInfo.value}</p>
+      {metadataQueryVisible.value && (
+        <MetadataQueryBar nvArray={nvArray} visible={metadataQueryVisible} />
+      )}
       <ScalingBox
         selectedOverlayNumber={selectedOverlayNumber}
         overlayMenu={overlayMenu}
@@ -323,6 +366,13 @@ export const Menu = (props: AppProps) => {
       />
       <HeaderBox nvArraySelected={nvArraySelected} nvArray={nvArray} visible={setHeaderMenu} />
       <HeaderDialog nvArraySelected={nvArraySelected} isOpen={headerDialog} />
+      {spectralManagerVisible.value && (
+        <SpectralLayerManager
+          nvArray={nvArray}
+          nvArraySelected={nvArraySelected}
+          visible={spectralManagerVisible}
+        />
+      )}
     </>
   )
 }

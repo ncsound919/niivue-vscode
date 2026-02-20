@@ -181,3 +181,83 @@ export function getNumberOfPoints(nv: Niivue) {
   const matrixString = 'Number of Points: ' + mesh.pts.length / 3
   return matrixString
 }
+
+export type MetadataOperator = '>' | '<' | '>=' | '<=' | '=' | 'contains'
+
+export interface MetadataCondition {
+  field: string
+  operator: MetadataOperator
+  value: string | number
+}
+
+/**
+ * Parse a simple SQL-like metadata query string into conditions.
+ * Supports: "field > value", "field contains 'value'", conditions joined by AND.
+ * Example: "nx > 100 AND name contains 'mni'"
+ */
+export function parseMetadataQuery(query: string): MetadataCondition[] {
+  const conditions: MetadataCondition[] = []
+  if (!query.trim()) return conditions
+
+  const parts = query.split(/\bAND\b/i)
+  for (const part of parts) {
+    const trimmed = part.trim()
+    const containsMatch = trimmed.match(/^(\w+)\s+contains\s+'([^']*)'$/i)
+    if (containsMatch) {
+      conditions.push({ field: containsMatch[1], operator: 'contains', value: containsMatch[2] })
+      continue
+    }
+    const numMatch = trimmed.match(/^(\w+)\s*(>=|<=|>|<|=)\s*(-?\d+\.?\d*)$/)
+    if (numMatch) {
+      conditions.push({
+        field: numMatch[1],
+        operator: numMatch[2] as MetadataOperator,
+        value: parseFloat(numMatch[3]),
+      })
+    }
+  }
+  return conditions
+}
+
+/**
+ * Evaluate whether a NiiVue instance matches a metadata query string.
+ * Returns true if no conditions are specified or all conditions match.
+ */
+export function evaluateMetadataQuery(nv: Niivue, query: string): boolean {
+  if (!query.trim()) return true
+  const conditions = parseMetadataQuery(query)
+  if (conditions.length === 0) return true
+
+  const meta: Record<string, any> =
+    (nv?.volumes?.length ?? 0) > 0 ? (nv.volumes[0].getImageMetadata() ?? {}) : {}
+  const name: string =
+    decodeURIComponent(nv?.volumes?.[0]?.name ?? nv?.meshes?.[0]?.name ?? (nv as any)?.uri ?? '')
+
+  return conditions.every((cond) => {
+    const field = cond.field.toLowerCase()
+    let fieldValue: any
+    if (field === 'name') {
+      fieldValue = name
+    } else {
+      fieldValue = meta[cond.field] ?? meta[field]
+    }
+    if (fieldValue === undefined || fieldValue === null) return false
+
+    switch (cond.operator) {
+      case 'contains':
+        return String(fieldValue).toLowerCase().includes(String(cond.value).toLowerCase())
+      case '>':
+        return Number(fieldValue) > Number(cond.value)
+      case '<':
+        return Number(fieldValue) < Number(cond.value)
+      case '>=':
+        return Number(fieldValue) >= Number(cond.value)
+      case '<=':
+        return Number(fieldValue) <= Number(cond.value)
+      case '=':
+        return String(fieldValue) === String(cond.value)
+      default:
+        return false
+    }
+  })
+}

@@ -331,6 +331,92 @@ export function initCanvas(props: AppProps, n = 1) {
   growNvArrayBy(nvArray, n)
 }
 
+/**
+ * Build a shareable URL that encodes the current scene state (image URLs,
+ * slice type, colormap and basic display settings).  Only images that were
+ * loaded from a remote URL (i.e. their name starts with "http") are included.
+ */
+export function getSceneStateURL(appProps: AppProps): string {
+  const { nvArray, sliceType, settings } = appProps
+  const url = new URL(window.location.href)
+
+  const imageURLs = nvArray.value
+    .map((nv) => {
+      const name = nv.volumes[0]?.name ?? nv.meshes[0]?.name ?? (nv as any).uri ?? ''
+      return decodeURIComponent(name)
+    })
+    .filter((name) => name.startsWith('http'))
+
+  if (imageURLs.length > 0) {
+    url.searchParams.set('images', imageURLs.join(','))
+  } else {
+    url.searchParams.delete('images')
+  }
+
+  url.searchParams.set('sliceType', String(sliceType.value))
+  url.searchParams.set('colormap', settings.value.defaultVolumeColormap)
+  url.searchParams.set('interpolation', String(settings.value.interpolation))
+  url.searchParams.set('crosshairs', String(settings.value.showCrosshairs))
+
+  return url.toString()
+}
+
+/**
+ * Export the current scene as a plain-text stats report and individual PNG
+ * screenshots of every loaded viewer canvas.
+ */
+export function exportSceneReport(nvArray: ExtendedNiivue[]) {
+  const reportLines: string[] = ['NiiVue Scene Report', '===================', '']
+
+  nvArray.forEach((nv, idx) => {
+    const name =
+      decodeURIComponent(
+        nv.volumes[0]?.name ?? nv.meshes[0]?.name ?? (nv as any).uri ?? '',
+      ) || `viewer-${idx + 1}`
+    reportLines.push(`Image ${idx + 1}: ${name}`)
+
+    if (nv.volumes.length > 0) {
+      const meta = nv.volumes[0].getImageMetadata()
+      if (meta?.nx) {
+        reportLines.push(
+          `  Matrix:    ${meta.nx} x ${meta.ny} x ${meta.nz}`,
+        )
+        if (meta.dx != null && meta.dy != null && meta.dz != null) {
+          reportLines.push(
+            `  Voxel size: ${meta.dx.toPrecision(3)} x ${meta.dy.toPrecision(3)} x ${meta.dz.toPrecision(3)} mm`,
+          )
+        }
+        if (meta.nt > 1) {
+          reportLines.push(`  Timepoints: ${meta.nt}`)
+        }
+      }
+      reportLines.push(`  Overlays:   ${nv.volumes.length - 1}`)
+    } else if (nv.meshes.length > 0) {
+      reportLines.push(`  Vertices:   ${nv.meshes[0].pts.length / 3}`)
+      reportLines.push(`  Layers:     ${nv.meshes[0].layers.length}`)
+    }
+    reportLines.push('')
+  })
+
+  const blob = new Blob([reportLines.join('\n')], { type: 'text/plain' })
+  const reportURL = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = reportURL
+  a.download = 'niivue-report.txt'
+  a.click()
+  URL.revokeObjectURL(reportURL)
+
+  nvArray.forEach((nv, idx) => {
+    if (nv.canvas) {
+      const imageData = nv.canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = imageData
+      link.download = `niivue-scene-${idx + 1}.png`
+      link.click()
+    }
+  })
+}
+
 function getUnitinializedNvInstance(nvArray: Signal<ExtendedNiivue[]>) {
   const nv = nvArray.value.find((nv) => nv.isNew)
   if (nv) {
