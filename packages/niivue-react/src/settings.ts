@@ -6,6 +6,9 @@ export interface MenuItems {
   colorScale: boolean
   overlay: boolean
   header: boolean
+  spectralManager: boolean
+  metadataQuery: boolean
+  export: boolean
 }
 
 export interface NiiVueSettings {
@@ -37,5 +40,8 @@ export const defaultSettings: NiiVueSettings = {
     colorScale: true,
     overlay: true,
     header: true,
+    spectralManager: true,
+    metadataQuery: true,
+    export: true,
   },
 }
