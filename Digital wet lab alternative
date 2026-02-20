@@ -1,0 +1,192 @@
+```json
+{
+  "project": "Digital Wet Lab for Overlay365",
+  "goal": "Data-driven visualization replacing physical subjects with media",
+  "fullDescription": "Digital Wet Lab for Overlay365 is a complete paradigm shift in experimental science. Instead of physical wet-lab benches with glassware, reagents, and one-time-use specimens, the entire laboratory becomes a media-first, data-native environment. Every 'experiment' is a rich, queryable digital asset — high-resolution video, multi-spectral layers, time-stamped metadata — managed exactly like code or tabular data. The result is infinite repeatability, zero consumable cost, perfect reproducibility, and global real-time collaboration. Overlay365 serves as the unifying workspace (Office 365 for experimental media) where these virtual specimens live, are analyzed, versioned, and shared.",
+  "coreInfrastructure": {
+    "virtualSpecimen": {
+      "description": "Centralized Media Asset Management (MAM) system treating media as raw data points with embedded metadata (temperature, pH, lighting, specimen ID, parameters) enabling SQL-like queries across thousands of experiments.",
+      "components": [
+        {
+          "name": "Macro-High Speed Imaging",
+          "description": "4K/60 fps (or 8K/120 fps) footage of reactions, fluid dynamics, or micro-scale movements. Single 30-second clip can be slowed to 1/10th speed for frame-by-frame optical-flow analysis.",
+          "openSourceTools": [
+            "OpenCV for frame extraction, tracking, feature detection",
+            "FFmpeg for lossless transcoding and trimming",
+            "scikit-image for precise measurements"
+          ],
+          "openDataSources": [
+            "Broad Bioimage Benchmark Collection (BBBC) 4K microscopy sets"
+          ]
+        },
+        {
+          "name": "Time-Lapse Integration",
+          "description": "Hours or days of cellular growth, crystal formation, or decomposition compressed into minutes with automatic frame registration for differential analysis.",
+          "openSourceTools": [
+            "ImageJ/Fiji with ecosystem of plugins",
+            "CellProfiler for batch quantification pipelines",
+            "FFmpeg for video assembly"
+          ],
+          "openDataSources": [
+            "Allen Cell Explorer (human iPSC time-lapses)",
+            "Cell Image Library"
+          ]
+        },
+        {
+          "name": "Thermal & Spectral Overlays",
+          "description": "Infrared video for heat signatures or blood flow; hyperspectral cubes for material identification. Layers registered to visible channel for toggling and querying (e.g., pixels above 42 °C at t=00:12).",
+          "openSourceTools": [
+            "GDAL & Orfeo ToolBox for multi-band handling",
+            "Python spectral + matplotlib",
+            "OpenCV for false-color mapping"
+          ],
+          "openDataSources": [
+            "NASA JPL ASTER spectral library",
+            "Public FLIR thermal collections"
+          ]
+        },
+        {
+          "name": "Standardized Calibration",
+          "description": "Every asset carries digital ColorChecker and scale bar. Color management and spatial calibration applied at ingest for cross-rig comparability.",
+          "openSourceTools": [
+            "OpenCV camera calibration",
+            "Colour-Science Python library",
+            "RawTherapee for RAW pipeline"
+          ],
+          "openDataSources": [
+            "ColorChecker datasets",
+            "Camera calibration patterns"
+          ]
+        }
+      ]
+    }
+  },
+  "strategicAdvantages": [
+    {
+      "name": "Non-Destructive Testing",
+      "description": "Digital subjects allow infinite experiment resets and parallel 'what-if' branches. No cost of physical reagents.",
+      "openSourceTools": [
+        "DVC (Data Version Control)",
+        "Git LFS",
+        "Reproducible analysis with Jupyter notebooks and Binder"
+      ]
+    },
+    {
+      "name": "Automated Feature Extraction",
+      "description": "Computer-vision pipelines automatically count cells, measure volumes, track color changes, or segment tissue. Turns raw video into quantitative tables in minutes.",
+      "openSourceTools": [
+        "OpenCV",
+        "scikit-image",
+        "TensorFlow/PyTorch with U-Net segmentation",
+        "CellProfiler",
+        "TrackMate (Fiji plugin)"
+      ],
+      "openDataSources": [
+        "Kaggle cell counting datasets",
+        "Medical segmentation datasets (LiTS, BraTS)"
+      ]
+    },
+    {
+      "name": "Global Collaboration",
+      "description": "Analytics teams across continents open the exact same virtual specimen, annotate simultaneously, run shared notebooks, and discuss in real time.",
+      "openSourceTools": [
+        "Nextcloud or ownCloud for file sharing",
+        "JupyterHub for collaborative analysis",
+        "Octave (open-source MATLAB)",
+        "RStudio Server",
+        "Jitsi for video conferencing"
+      ]
+    }
+  ],
+  "emergingTechTrends": [
+    {
+      "name": "Synthetic Data Generation",
+      "description": "GANs, Blender procedural scenes, or Unreal Engine renders create unlimited training data for rare or hazardous reactions.",
+      "openSourceTools": [
+        "TensorFlow/GANs",
+        "PyTorch StyleGAN2-ADA",
+        "Blender for 3D synthetic generation",
+        "Unreal Engine (source available)"
+      ],
+      "openDataSources": [
+        "Pretrained GAN models on TensorFlow Hub",
+        "Synthetic datasets from OpenDataVault"
+      ]
+    },
+    {
+      "name": "Digital Twins",
+      "description": "Video is the visual 'skin' over a mathematical model. Change a parameter in the model and the overlay updates in real time.",
+      "openSourceTools": [
+        "Eclipse Ditto for IoT orchestration",
+        "OpenModelica for physical modeling",
+        "PhysiCell for multicellular simulations",
+        "OpenSim for biomechanics",
+        "3D Slicer for medical visualization"
+      ],
+      "openDataSources": [
+        "Virtual Physiological Human datasets",
+        "OpenSim models"
+      ]
+    }
+  ],
+  "executionRoadmap": {
+    "phases": [
+      {
+        "phase": "Capture",
+        "action": "Deploy 8K macro rigs with controlled lighting and automation.",
+        "outcome": "High-fidelity raw, calibrated, time-stamped media.",
+        "openSourceTools": [
+          "OpenCV camera control",
+          "gPhoto2 for DSLR control",
+          "FFmpeg for recording",
+          "Arduino + open-source firmware for lighting"
+        ]
+      },
+      {
+        "phase": "Annotate",
+        "action": "AI-assisted labeling of frames (e.g., 'T-cell contact').",
+        "outcome": "Searchable, queryable media assets.",
+        "openSourceTools": [
+          "CVAT (Computer Vision Annotation Tool)",
+          "LabelImg",
+          "VGG Image Annotator (VIA)",
+          "ModAL for active learning"
+        ],
+        "openDataSources": [
+          "Pretrained models from TensorFlow Model Zoo and PyTorch Hub"
+        ]
+      },
+      {
+        "phase": "Analyze",
+        "action": "Run pixel-change detection, optical flow, and deep-learning algorithms.",
+        "outcome": "Quantitative data extracted from visual sources.",
+        "openSourceTools": [
+          "OpenCV for optical flow",
+          "scikit-image for change detection",
+          "numpy/scipy",
+          "R with EBImage",
+          "PyTorch for deep-learning change detection"
+        ]
+      },
+      {
+        "phase": "Archive",
+        "action": "Cloud-based version control and permanent repositories.",
+        "outcome": "Audit-ready experiment history with permanent DOIs.",
+        "openSourceTools": [
+          "DVC + Git LFS",
+          "Nextcloud with versioning",
+          "Dat/Hypercore for decentralized versioning",
+          "Zenodo for open archiving"
+        ]
+      }
+    ]
+  },
+  "openSourceEcosystemSummary": "The entire digital wet lab can be built today using only open-source tools for capture, annotation, analysis, and archiving, combined with public datasets for training and validation. This delivers cost-effectiveness, full transparency, no vendor lock-in, and community-driven innovation.",
+  "keyOutcomes": [
+    "Marginal cost per additional virtual experiment approaches zero",
+    "Safety and reproducibility increase dramatically",
+    "Global accessibility to high-end experimental media",
+    "The experiment itself becomes data, and data becomes the experiment"
+  ]
+}
+```
