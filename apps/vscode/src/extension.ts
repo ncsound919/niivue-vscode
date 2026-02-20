@@ -44,6 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         uri = vscode.Uri.parse(uriString)
       } catch (error) {
+        console.error('Failed to parse specimen URI:', error)
         vscode.window.showErrorMessage(`Invalid specimen URI: ${uriString}`)
         return
       }
@@ -114,6 +115,14 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('wetlab.removeSpecimen', async (item: SpecimenTreeItem) => {
       const entry = item?.specimenEntry
       if (!entry) {
+        return
+      }
+      const answer = await vscode.window.showWarningMessage(
+        `Remove specimen "${entry.name}" from the Wet Lab registry? This will permanently delete its provenance history.`,
+        { modal: true },
+        'Remove',
+      )
+      if (answer !== 'Remove') {
         return
       }
       registry.remove(entry.id)

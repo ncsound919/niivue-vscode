@@ -27,6 +27,11 @@ export class SpecimenRegistry {
     this.storageFile = vscode.Uri.joinPath(context.globalStorageUri, 'wetlab-registry.json')
   }
 
+  /** Derive a stable, unique ID for a URI using SHA-256 */
+  private generateId(uri: string): string {
+    return crypto.createHash('sha256').update(uri).digest('hex')
+  }
+
   async load(): Promise<void> {
     try {
       const data = await vscode.workspace.fs.readFile(this.storageFile)
@@ -49,15 +54,15 @@ export class SpecimenRegistry {
 
   async register(uri: vscode.Uri, tags: string[] = []): Promise<SpecimenEntry> {
     const name = uri.path.split('/').pop() ?? uri.toString()
-    const id = crypto.createHash('sha256').update(uri.toString()).digest('hex')
+    const id = this.generateId(uri.toString())
 
     let fileSizeBytes: number | undefined
     let sha256: string | undefined
     try {
       const stat = await vscode.workspace.fs.stat(uri)
       fileSizeBytes = stat.size
-      // Only compute SHA-256 for files smaller than 50 MB
-      if (stat.size < 50 * 1024 * 1024) {
+      // Only compute SHA-256 for files up to 10 MB to avoid blocking the extension host
+      if (stat.size < 10 * 1024 * 1024) {
         const fileData = await vscode.workspace.fs.readFile(uri)
         sha256 = crypto.createHash('sha256').update(fileData).digest('hex')
       }
@@ -95,8 +100,7 @@ export class SpecimenRegistry {
   }
 
   getByUri(uri: string): SpecimenEntry | undefined {
-    const id = crypto.createHash('md5').update(uri).digest('hex')
-    return this.entries.get(id)
+    return this.entries.get(this.generateId(uri))
   }
 
   list(): SpecimenEntry[] {
