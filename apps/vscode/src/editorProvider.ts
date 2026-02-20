@@ -36,9 +36,17 @@ export class NiiVueEditorProvider implements vscode.CustomReadonlyEditorProvider
     console.log(`Opening document ${uri}`)
     const config = vscode.workspace.getConfiguration('niivue')
     if (config.get<boolean>('wetlab.autoRegister', true) && NiiVueEditorProvider._registry) {
-      NiiVueEditorProvider._registry.register(uri).then(() => {
-        NiiVueEditorProvider._treeProvider?.refresh()
-      })
+      NiiVueEditorProvider._registry
+        .register(uri)
+        .then(() => {
+          NiiVueEditorProvider._treeProvider?.refresh()
+        })
+        .catch((error) => {
+          console.error('Failed to auto-register specimen for wetlab view:', error)
+          void vscode.window.showWarningMessage(
+            'Failed to auto-register specimen for wetlab view. See extension logs for details.',
+          )
+        })
     }
     return new NiiVueDocument(uri)
   }
