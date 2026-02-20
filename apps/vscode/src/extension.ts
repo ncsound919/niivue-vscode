@@ -47,7 +47,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage(`Invalid specimen URI: ${uriString}`)
         return
       }
-      vscode.commands.executeCommand('vscode.openWith', uri, 'niiVue.default')
+      try {
+        await vscode.commands.executeCommand('vscode.openWith', uri, 'niiVue.default')
+      } catch (error) {
+        console.error('Failed to open specimen with NiiVue editor:', error)
+        vscode.window.showErrorMessage('Unable to open specimen in NiiVue editor.')
+      }
     }),
   )
 
