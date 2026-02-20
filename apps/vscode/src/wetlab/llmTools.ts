@@ -273,11 +273,30 @@ export class AddNoteTool implements vscode.LanguageModelTool<AddNoteInput> {
       }
     }
 
-    await this.registry.addNote(match.id, options.input.note)
-    this.treeProvider.refresh()
-    return makeTextResult(
-      `Note added to specimen "${match.name}": "${options.input.note}"`,
-    )
+    try {
+      const result = await this.registry.addNote(match.id, options.input.note)
+
+      // If the registry reports failure explicitly (e.g., by returning false),
+      // surface that to the user instead of claiming success.
+      if (result === false) {
+        return makeTextResult(
+          `Failed to add note to specimen "${match.name}". The specimen may have been removed or is no longer available.`,
+        )
+      }
+
+      this.treeProvider.refresh()
+      return makeTextResult(
+        `Note added to specimen "${match.name}": "${options.input.note}"`,
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? ` ${error.message}`
+          : ''
+      return makeTextResult(
+        `Failed to add note to specimen "${match.name}".${message}`,
+      )
+    }
   }
 
   prepareInvocation(
