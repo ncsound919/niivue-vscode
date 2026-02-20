@@ -75,10 +75,10 @@ export const HARDWARE_CATALOG: HardwareDevice[] = [
     implementationGuide: {
       prerequisites: ['Supported DSLR (check gphoto.org support list)', 'USB cable'],
       steps: [
-        'RPi: sudo apt install gphoto2; gphoto2 --auto-detect',
-        'Capture: gphoto2 --capture-image-and-download --filename %Y%m%d_%H%M%S.jpg',
-        'Time-lapse: gphoto2 --interval 5 --capture-image-and-download',
-        'Browser: npm install tethr; connect via WebUSB',
+        '1. On Raspberry Pi, install and detect camera with gPhoto2: sudo apt install gphoto2; gphoto2 --auto-detect',
+        '2. Capture single images: gphoto2 --capture-image-and-download --filename %Y%m%d_%H%M%S.jpg',
+        '3. Configure time-lapse capture: gphoto2 --interval 5 --capture-image-and-download',
+        '4. In browser environment, install tethr and connect via WebUSB: npm install tethr; connect via WebUSB',
       ],
       codeExample:
         'gphoto2 --set-config /main/capturesettings/shutterspeed=1/100 --capture-image',
@@ -236,7 +236,7 @@ export const HARDWARE_CATALOG: HardwareDevice[] = [
     keyTools: ['Micro-Manager Aladdin adapter', 'Elveflow SDK'],
     implementationGuide: {
       prerequisites: ['Pump connected'],
-      steps: ['Add device in MM config → script flow rates synchronized with imaging'],
+      steps: ['1. Add device in MM config → script flow rates synchronized with imaging'],
       codeExample: "core.set_property('Aladdin', 'FlowRate', 0.5)",
       overlay365Integration: 'Flow metadata embedded → queryable virtual specimens',
     },
@@ -250,7 +250,7 @@ export const HARDWARE_CATALOG: HardwareDevice[] = [
     keyTools: ['Micro-Manager Okolab/Pecon adapters'],
     implementationGuide: {
       prerequisites: ['Chamber USB connected'],
-      steps: ['Configure in MM → set temp/CO2 in acquisition loop'],
+      steps: ['1. Configure in MM → set temp/CO2 in acquisition loop'],
       codeExample: "core.set_property('Okolab', 'Temperature', 37)",
       overlay365Integration: 'Continuous logging → sidecar JSON for every time-point',
     },

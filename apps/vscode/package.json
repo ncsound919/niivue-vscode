@@ -114,6 +114,21 @@
         "command": "wetlab.showHardwareDetails",
         "title": "Wet Lab: Show Hardware Details",
         "icon": "$(circuit-board)"
+      },
+      {
+        "command": "wetlab.hardware.connect",
+        "title": "Wet Lab: Connect Device",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "wetlab.hardware.disconnect",
+        "title": "Wet Lab: Disconnect Device",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "wetlab.hardware.acquire",
+        "title": "Wet Lab: Acquire from Device",
+        "icon": "$(record)"
       }
     ],
     "viewsContainers": {
@@ -246,6 +261,38 @@
           "command": "wetlab.removeSpecimen",
           "when": "view == wetlab.specimens && viewItem == wetlabSpecimen",
           "group": "wetlab@3"
+        },
+        {
+          "command": "wetlab.hardware.connect",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.disconnected",
+          "group": "hardware@1"
+        },
+        {
+          "command": "wetlab.hardware.disconnect",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.connected",
+          "group": "hardware@1"
+        },
+        {
+          "command": "wetlab.hardware.acquire",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.connected",
+          "group": "hardware@2"
+        }
+      ],
+      "view/item/inline": [
+        {
+          "command": "wetlab.hardware.connect",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.disconnected",
+          "group": "inline"
+        },
+        {
+          "command": "wetlab.hardware.acquire",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.connected",
+          "group": "inline"
+        },
+        {
+          "command": "wetlab.hardware.disconnect",
+          "when": "view == wetlab.hardware && viewItem == hardwareDevice.connected",
+          "group": "inline"
         }
       ]
     },
@@ -359,7 +406,11 @@
     "languageModelTools": [
       {
         "name": "wetlab_listSpecimens",
-        "tags": ["wetlab", "specimens", "neuroimaging"],
+        "tags": [
+          "wetlab",
+          "specimens",
+          "neuroimaging"
+        ],
         "displayName": "Wet Lab: List Specimens",
         "modelDescription": "Lists all digital specimens registered in the NiiVue Digital Wet Lab, including file names, sizes, SHA-256 checksums, tags, and registration dates.",
         "inputSchema": {
@@ -369,7 +420,11 @@
       },
       {
         "name": "wetlab_getProvenance",
-        "tags": ["wetlab", "provenance", "neuroimaging"],
+        "tags": [
+          "wetlab",
+          "provenance",
+          "neuroimaging"
+        ],
         "displayName": "Wet Lab: Get Provenance",
         "modelDescription": "Returns the full provenance chain (history of actions and notes) for a registered specimen, identified by name or URI fragment.",
         "inputSchema": {
@@ -380,12 +435,18 @@
               "description": "The file name or partial URI of the specimen to query."
             }
           },
-          "required": ["specimenName"]
+          "required": [
+            "specimenName"
+          ]
         }
       },
       {
         "name": "wetlab_addNote",
-        "tags": ["wetlab", "provenance", "neuroimaging"],
+        "tags": [
+          "wetlab",
+          "provenance",
+          "neuroimaging"
+        ],
         "displayName": "Wet Lab: Add Note",
         "modelDescription": "Adds a free-text provenance note to a registered specimen. Requires user confirmation before writing.",
         "inputSchema": {
@@ -400,12 +461,19 @@
               "description": "The note text to append to the specimen's provenance history."
             }
           },
-          "required": ["specimenName", "note"]
+          "required": [
+            "specimenName",
+            "note"
+          ]
         }
       },
       {
         "name": "wetlab_registerSpecimen",
-        "tags": ["wetlab", "specimens", "neuroimaging"],
+        "tags": [
+          "wetlab",
+          "specimens",
+          "neuroimaging"
+        ],
         "displayName": "Wet Lab: Register Specimen",
         "modelDescription": "Registers a medical-imaging file (NIfTI, DICOM, etc.) as a digital specimen in the Wet Lab registry. Requires user confirmation before writing.",
         "inputSchema": {
@@ -416,7 +484,9 @@
               "description": "The absolute file path or file:// URI of the image file to register."
             }
           },
-          "required": ["filePath"]
+          "required": [
+            "filePath"
+          ]
         }
       }
     ]

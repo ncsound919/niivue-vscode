@@ -1,19 +1,20 @@
 import * as vscode from 'vscode'
 import { HardwareDevice, getDevicesByCategory, getHardwareCategories } from './hardwareCatalog'
+import type { HardwareManager } from './hardwareManager'
 
 type HardwareTreeNode =
   | { kind: 'category'; label: string }
   | { kind: 'device'; device: HardwareDevice }
-  | { kind: 'info'; label: string }
 
 export class HardwareTreeItem extends vscode.TreeItem {
-  constructor(public readonly node: HardwareTreeNode) {
+  constructor(
+    public readonly node: HardwareTreeNode,
+    connected?: boolean,
+  ) {
     const label =
       node.kind === 'category'
         ? node.label
-        : node.kind === 'device'
-          ? `${node.device.id} — ${node.device.name}`
-          : node.label
+        : `${node.device.id} — ${node.device.name}`
 
     const collapsibleState =
       node.kind === 'category'
@@ -25,9 +26,13 @@ export class HardwareTreeItem extends vscode.TreeItem {
     if (node.kind === 'category') {
       this.iconPath = new vscode.ThemeIcon('folder')
       this.contextValue = 'hardwareCategory'
-    } else if (node.kind === 'device') {
-      this.iconPath = new vscode.ThemeIcon('circuit-board')
-      this.contextValue = 'hardwareDevice'
+    } else {
+      const isConnected = connected === true
+      this.iconPath = new vscode.ThemeIcon(
+        'circuit-board',
+        new vscode.ThemeColor(isConnected ? 'testing.iconPassed' : 'disabledForeground'),
+      )
+      this.contextValue = isConnected ? 'hardwareDevice.connected' : 'hardwareDevice.disconnected'
       this.tooltip = new vscode.MarkdownString(
         [
           `**${node.device.name}** (${node.device.id})`,
@@ -37,16 +42,16 @@ export class HardwareTreeItem extends vscode.TreeItem {
           `**Platforms:** ${node.device.supportedPlatforms.join(', ')}`,
           ``,
           `**Key Tools:** ${node.device.keyTools.join(', ')}`,
+          ``,
+          isConnected ? `$(pass-filled) Connected` : `$(circle-slash) Disconnected`,
         ].join('\n'),
       )
+      this.tooltip.isTrusted = true
       this.command = {
         command: 'wetlab.showHardwareDetails',
         title: 'Show Hardware Details',
         arguments: [node.device],
       }
-    } else {
-      this.iconPath = new vscode.ThemeIcon('info')
-      this.contextValue = 'hardwareInfo'
     }
   }
 }
@@ -54,6 +59,10 @@ export class HardwareTreeItem extends vscode.TreeItem {
 export class HardwareTreeProvider implements vscode.TreeDataProvider<HardwareTreeItem> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>()
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event
+
+  constructor(private readonly manager?: HardwareManager) {
+    manager?.onDidChangeState(() => this.refresh())
+  }
 
   refresh(): void {
     this._onDidChangeTreeData.fire()
@@ -71,11 +80,13 @@ export class HardwareTreeProvider implements vscode.TreeDataProvider<HardwareTre
     }
 
     if (element.node.kind === 'category') {
-      return getDevicesByCategory(element.node.label).map(
-        (device) => new HardwareTreeItem({ kind: 'device', device }),
-      )
+      return getDevicesByCategory(element.node.label).map((device) => {
+        const connected = this.manager?.getState(device.id)?.connected ?? false
+        return new HardwareTreeItem({ kind: 'device', device }, connected)
+      })
     }
 
     return []
   }
 }
+
