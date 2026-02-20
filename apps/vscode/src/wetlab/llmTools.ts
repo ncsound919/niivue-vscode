@@ -3,6 +3,7 @@ import { SpecimenRegistry } from './registry'
 import { WetLabTreeProvider } from './treeProvider'
 
 /** Input schema for the list-specimens tool (no parameters needed) */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ListSpecimensInput {}
 
 /** Input schema for get-provenance tool */
@@ -36,6 +37,11 @@ function makeTextResult(text: string): vscode.LanguageModelToolResult {
 export class ListSpecimensTool implements vscode.LanguageModelTool<ListSpecimensInput> {
   constructor(private readonly registry: SpecimenRegistry) {}
 
+  /**
+   * @param _options Tool invocation options (no input required for this tool).
+   * @param _token Cancellation token.
+   * @returns A text result listing all registered specimens with metadata.
+   */
   invoke(
     _options: vscode.LanguageModelToolInvocationOptions<ListSpecimensInput>,
     _token: vscode.CancellationToken,
@@ -62,6 +68,11 @@ export class ListSpecimensTool implements vscode.LanguageModelTool<ListSpecimens
     return makeTextResult(lines.join('\n'))
   }
 
+  /**
+   * @param _options Prepare options (no input required for this tool).
+   * @param _token Cancellation token.
+   * @returns A prepared invocation with a progress message.
+   */
   prepareInvocation(
     _options: vscode.LanguageModelToolInvocationPrepareOptions<ListSpecimensInput>,
     _token: vscode.CancellationToken,
@@ -149,36 +160,57 @@ export class GetProvenanceTool implements vscode.LanguageModelTool<GetProvenance
     return dp[b.length]
   }
 
+  /**
+   * @param options Tool invocation options containing the specimen name to look up.
+   * @param _token Cancellation token.
+   * @returns A text result with the full provenance chain, or an error/disambiguation message.
+   */
   invoke(
     options: vscode.LanguageModelToolInvocationOptions<GetProvenanceInput>,
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.LanguageModelToolResult> {
-    const query = options.input.specimenName.toLowerCase()
+    const queryRaw = options.input.specimenName
+    const query = queryRaw.toLowerCase()
     const specimens = this.registry.list()
-    const matches = specimens.filter(
-      (s) => s.name.toLowerCase().includes(query) || s.uri.toLowerCase().includes(query),
+
+    // Prefer exact (case-insensitive) matches on name or URI
+    const exactMatches = specimens.filter(
+      (s) => s.name.toLowerCase() === query || s.uri.toLowerCase() === query,
     )
 
-    if (matches.length === 0) {
-      const suggestions = this.suggestSpecimens(query, specimens)
-      let message = `No specimen found matching "${options.input.specimenName}". Use the wetlab_listSpecimens tool to see all registered specimens.`
-      if (suggestions.length > 0) {
-        message += `\n\nDid you mean:\n${suggestions.map((s) => `- ${s}`).join('\n')}`
+    let match: (typeof specimens)[number] | undefined
+
+    if (exactMatches.length === 1) {
+      match = exactMatches[0]
+    } else if (exactMatches.length > 1) {
+      const candidates = exactMatches.map((s) => `- ${s.name} (${s.uri})`).join('\n')
+      return makeTextResult(
+        `Multiple specimens match "${queryRaw}" exactly:\n\n${candidates}\n\n` +
+          'Please specify a more precise specimen name or URI.',
+      )
+    } else {
+      // Fall back to partial (substring) matches
+      const partialMatches = specimens.filter(
+        (s) => s.name.toLowerCase().includes(query) || s.uri.toLowerCase().includes(query),
+      )
+
+      if (partialMatches.length === 1) {
+        match = partialMatches[0]
+      } else if (partialMatches.length === 0) {
+        const suggestions = this.suggestSpecimens(query, specimens)
+        let message = `No specimen found matching "${queryRaw}". Use the wetlab_listSpecimens tool to see all registered specimens.`
+        if (suggestions.length > 0) {
+          message += `\n\nDid you mean:\n${suggestions.map((s) => `- ${s}`).join('\n')}`
+        }
+        return makeTextResult(message)
+      } else {
+        const candidates = partialMatches.map((s) => `- ${s.name} (${s.uri})`).join('\n')
+        return makeTextResult(
+          `Multiple specimens match "${queryRaw}":\n\n${candidates}\n\n` +
+            'Please specify a more precise specimen name or URI.',
+        )
       }
-      return makeTextResult(message)
     }
-
-    if (matches.length > 1) {
-      const header =
-        `Multiple specimens match "${options.input.specimenName}". ` +
-        'Please refine your query or use the wetlab_listSpecimens tool to see details.\n'
-      const list = matches
-        .map((s) => `- ${s.name} (${s.uri})`)
-        .join('\n')
-      return makeTextResult(`${header}\n${list}`)
-    }
-
-    const match = matches[0]
     const lines: string[] = [
       `📊 Provenance Chain: ${match.name}`,
       '─'.repeat(60),
@@ -206,6 +238,11 @@ export class GetProvenanceTool implements vscode.LanguageModelTool<GetProvenance
     return makeTextResult(lines.join('\n'))
   }
 
+  /**
+   * @param options Prepare options containing the specimen name.
+   * @param _token Cancellation token.
+   * @returns A prepared invocation with a progress message.
+   */
   prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<GetProvenanceInput>,
     _token: vscode.CancellationToken,
@@ -226,6 +263,11 @@ export class AddNoteTool implements vscode.LanguageModelTool<AddNoteInput> {
     private readonly treeProvider: WetLabTreeProvider,
   ) {}
 
+  /**
+   * @param options Tool invocation options containing the specimen name and note text.
+   * @param _token Cancellation token.
+   * @returns A text result confirming the note was added, or an error/disambiguation message.
+   */
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<AddNoteInput>,
     _token: vscode.CancellationToken,
@@ -274,16 +316,7 @@ export class AddNoteTool implements vscode.LanguageModelTool<AddNoteInput> {
     }
 
     try {
-      const result = await this.registry.addNote(match.id, options.input.note)
-
-      // If the registry reports failure explicitly (e.g., by returning false),
-      // surface that to the user instead of claiming success.
-      if (result === false) {
-        return makeTextResult(
-          `Failed to add note to specimen "${match.name}". The specimen may have been removed or is no longer available.`,
-        )
-      }
-
+      await this.registry.addNote(match.id, options.input.note)
       this.treeProvider.refresh()
       return makeTextResult(
         `Note added to specimen "${match.name}": "${options.input.note}"`,
@@ -299,6 +332,11 @@ export class AddNoteTool implements vscode.LanguageModelTool<AddNoteInput> {
     }
   }
 
+  /**
+   * @param options Prepare options containing the specimen name and note.
+   * @param _token Cancellation token.
+   * @returns A prepared invocation with a progress message and user confirmation request.
+   */
   prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<AddNoteInput>,
     _token: vscode.CancellationToken,
@@ -325,6 +363,11 @@ export class RegisterSpecimenTool implements vscode.LanguageModelTool<RegisterSp
     private readonly treeProvider: WetLabTreeProvider,
   ) {}
 
+  /**
+   * @param options Tool invocation options containing the file path to register.
+   * @param _token Cancellation token.
+   * @returns A text result confirming registration, or an error message.
+   */
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<RegisterSpecimenInput>,
     _token: vscode.CancellationToken,
@@ -338,6 +381,20 @@ export class RegisterSpecimenTool implements vscode.LanguageModelTool<RegisterSp
       return makeTextResult(`Invalid file path: "${options.input.filePath}"`)
     }
 
+    // Validate the path is within an open workspace folder to prevent
+    // registering arbitrary system files outside the user's project.
+    // Use getWorkspaceFolder() which properly handles path normalization and boundaries.
+    if (
+      vscode.workspace.workspaceFolders &&
+      vscode.workspace.workspaceFolders.length > 0 &&
+      !vscode.workspace.getWorkspaceFolder(uri)
+    ) {
+      return makeTextResult(
+        `Cannot register "${uri.fsPath}": the file is outside the current workspace. ` +
+          'Only files within the open workspace folders can be registered as specimens.',
+      )
+    }
+
     try {
       const entry = await this.registry.register(uri)
       this.treeProvider.refresh()
@@ -349,6 +406,11 @@ export class RegisterSpecimenTool implements vscode.LanguageModelTool<RegisterSp
     }
   }
 
+  /**
+   * @param options Prepare options containing the file path.
+   * @param _token Cancellation token.
+   * @returns A prepared invocation with a progress message and user confirmation request.
+   */
   prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<RegisterSpecimenInput>,
     _token: vscode.CancellationToken,

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode'
 import { SpecimenRegistry } from './registry'
 
+/** Maximum number of specimens to include in the LLM context to avoid exceeding context window limits. */
+const MAX_SPECIMENS_IN_CONTEXT = 20
+
 const PARTICIPANT_ID = 'niivue.wetlab'
 
 /**
@@ -23,13 +26,22 @@ export function registerWetLabChatParticipant(
   ): Promise<void> => {
     const prompt = request.prompt.trim().toLowerCase()
 
+    // Handle declared slash commands explicitly via request.command
+    const isListCommand =
+      request.command === 'list' ||
+      prompt.includes('list') ||
+      prompt.includes('show all') ||
+      prompt.includes('what specimens')
+
+    const isProvenanceCommand = request.command === 'provenance'
+
     // Show a helpful introduction when the user hasn't typed anything yet
-    if (prompt === '') {
+    if (!isListCommand && !isProvenanceCommand && prompt === '') {
       response.markdown(
         '### Digital Wet Lab — Specimen Assistant\n\n' +
           'Ask me about registered specimens, provenance, or Digital Wet Lab operations.\n\n' +
-          '- Type **"list specimens"** to see all registered specimens.\n' +
-          '- Ask about a specific specimen by name to get details and provenance.\n' +
+          '- Use `/list` or type **"list specimens"** to see all registered specimens.\n' +
+          '- Use `/provenance <name>` or ask about a specific specimen to get its provenance.\n' +
           '- Describe an operation or analysis you want to perform on a specimen.\n\n' +
           'To register a new specimen, right-click a medical-imaging file in the Explorer and choose ' +
           '**Wet Lab: Register as Specimen**, or run the `wetlab.registerSpecimen` command.',
@@ -37,12 +49,8 @@ export function registerWetLabChatParticipant(
       return
     }
 
-    // Fast-path: plain provenance / list queries answered without an LLM round-trip
-    if (
-      prompt.includes('list') ||
-      prompt.includes('show all') ||
-      prompt.includes('what specimens')
-    ) {
+    // Fast-path: /list or plain list queries answered without an LLM round-trip
+    if (isListCommand) {
       const specimens = registry.list()
       if (specimens.length === 0) {
         response.markdown(
@@ -69,6 +77,57 @@ export function registerWetLabChatParticipant(
       return
     }
 
+    // Fast-path: /provenance <name> answered without an LLM round-trip
+    if (isProvenanceCommand) {
+      const specimenQuery = request.prompt.trim()
+      if (!specimenQuery) {
+        response.markdown(
+          '⚠️ Please provide a specimen name. Example: `/provenance brain.nii.gz`',
+        )
+        return
+      }
+      const queryLower = specimenQuery.toLowerCase()
+      const allSpecimens = registry.list()
+      const match =
+        allSpecimens.find((s) => s.name.toLowerCase() === queryLower) ??
+        allSpecimens.find(
+          (s) =>
+            s.name.toLowerCase().includes(queryLower) ||
+            s.uri.toLowerCase().includes(queryLower),
+        )
+      if (!match) {
+        response.markdown(
+          `No specimen found matching **"${specimenQuery}"**. ` +
+            'Use `/list` to see all registered specimens.',
+        )
+        return
+      }
+      const lines: string[] = [
+        `### 📊 Provenance: ${match.name}`,
+        `**URI:** \`${match.uri}\`  `,
+        `**Registered:** ${new Date(match.registeredAt).toLocaleString()}  `,
+      ]
+      if (match.fileSizeBytes !== undefined) {
+        lines.push(`**Size:** ${match.fileSizeBytes.toLocaleString()} bytes  `)
+      }
+      if (match.sha256) {
+        lines.push(`**SHA-256:** \`${match.sha256}\`  `)
+      }
+      if (match.dimensions) {
+        lines.push(`**Dimensions:** ${match.dimensions}  `)
+      }
+      if (match.tags.length > 0) {
+        lines.push(`**Tags:** ${match.tags.join(', ')}  `)
+      }
+      lines.push('\n**History:**')
+      match.provenance.forEach((p) => {
+        const note = p.note ? ` — "${p.note}"` : ''
+        lines.push(`- \`${new Date(p.timestamp).toLocaleString()}\` **${p.action}**${note}`)
+      })
+      response.markdown(lines.join('\n'))
+      return
+    }
+
     // Use the LM API to answer more complex queries with specimen context
     const config = vscode.workspace.getConfiguration('niivue.wetlab')
     const preferredModelFamily = config.get<string | undefined>('preferredModelFamily')
@@ -91,11 +150,15 @@ export function registerWetLabChatParticipant(
       return
     }
 
-    // Build context from the registry
-    const specimens = registry.list()
+    // Build context from the registry, capped to avoid exceeding context window limits.
+    // registry.list() returns specimens sorted newest-first, so the first MAX_SPECIMENS_IN_CONTEXT
+    // entries are the most recently registered specimens.
+    const allSpecimens = registry.list()
+    const specimenSubset = allSpecimens.slice(0, MAX_SPECIMENS_IN_CONTEXT)
+    const truncated = allSpecimens.length > MAX_SPECIMENS_IN_CONTEXT
     const registryContext =
-      specimens.length > 0
-        ? specimens
+      specimenSubset.length > 0
+        ? specimenSubset
             .map((s) => {
               const parts: string[] = [`File: ${s.name}`, `URI: ${s.uri}`]
               if (s.sha256) {
@@ -122,11 +185,15 @@ export function registerWetLabChatParticipant(
             .join('\n\n')
         : 'No specimens are currently registered.'
 
+    const truncationNote = truncated
+      ? `\n\n(Note: ${allSpecimens.length - MAX_SPECIMENS_IN_CONTEXT} additional specimens exist but are not shown here. Use the wetlab_listSpecimens tool for a full listing.)`
+      : ''
+
     const systemPrompt = [
       'You are an assistant for the Digital Wet Lab in the NiiVue VS Code extension.',
       'You help researchers manage and query their registered medical-imaging specimens (NIfTI, DICOM, etc.).',
       'You have access to the following registry of digital specimens:\n',
-      registryContext,
+      registryContext + truncationNote,
       '\nAnswer the user\'s question using this registry data. Be concise and precise.',
       'When referencing a specimen, use its file name. Prefer bullet lists for structured data.',
       'If asked to perform an action (register, add note, remove), explain the VS Code command to use.',
