@@ -361,6 +361,9 @@ export function getSceneStateURL(appProps: AppProps): string {
   return url.toString()
 }
 
+/** Milliseconds to wait before revoking a blob URL to ensure the browser can start the download. */
+const BLOB_REVOKE_DELAY_MS = 1000
+
 /**
  * Export the current scene as a plain-text stats report and individual PNG
  * screenshots of every loaded viewer canvas.
@@ -403,8 +406,11 @@ export function exportSceneReport(nvArray: ExtendedNiivue[]) {
   const a = document.createElement('a')
   a.href = reportURL
   a.download = 'niivue-report.txt'
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(reportURL)
+  document.body.removeChild(a)
+  // Revoke after a short delay to ensure the browser has started the download
+  setTimeout(() => URL.revokeObjectURL(reportURL), BLOB_REVOKE_DELAY_MS)
 
   nvArray.forEach((nv, idx) => {
     if (nv.canvas) {
@@ -412,7 +418,9 @@ export function exportSceneReport(nvArray: ExtendedNiivue[]) {
       const link = document.createElement('a')
       link.href = imageData
       link.download = `niivue-scene-${idx + 1}.png`
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
     }
   })
 }
