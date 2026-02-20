@@ -77,22 +77,108 @@ export class ListSpecimensTool implements vscode.LanguageModelTool<ListSpecimens
 export class GetProvenanceTool implements vscode.LanguageModelTool<GetProvenanceInput> {
   constructor(private readonly registry: SpecimenRegistry) {}
 
+  /**
+   * Suggest specimen names that are similar to the given query.
+   * This is used to provide more helpful error messages when no exact
+   * substring match is found.
+   */
+  private suggestSpecimens(
+    query: string,
+    specimens: { name: string; uri: string }[],
+  ): string[] {
+    const normalized = query.toLowerCase().trim()
+    if (!normalized) {
+      return []
+    }
+
+    const scored = specimens.map((s) => {
+      const label = s.name || s.uri
+      const candidate = `${s.name} ${s.uri}`.toLowerCase()
+      // Compare against a slice of the candidate to keep the distance
+      // computation reasonably small while still meaningful.
+      const sliceLength = Math.max(normalized.length, Math.min(candidate.length, normalized.length * 2))
+      const candidateSlice = candidate.slice(0, sliceLength)
+      const distance = this.levenshtein(normalized, candidateSlice)
+      return { label, distance }
+    })
+
+    scored.sort((a, b) => a.distance - b.distance)
+
+    const maxDistance = Math.max(3, Math.floor(normalized.length / 2))
+    return scored
+      .filter((s) => s.distance <= maxDistance)
+      .slice(0, 5)
+      .map((s) => s.label)
+  }
+
+  /**
+   * Compute the Levenshtein distance between two strings.
+   * This is a simple dynamic-programming implementation adequate for
+   * short specimen-name queries.
+   */
+  private levenshtein(a: string, b: string): number {
+    if (a === b) {
+      return 0
+    }
+    if (a.length === 0) {
+      return b.length
+    }
+    if (b.length === 0) {
+      return a.length
+    }
+
+    const dp = new Array<number>(b.length + 1)
+    for (let j = 0; j <= b.length; j++) {
+      dp[j] = j
+    }
+
+    for (let i = 1; i <= a.length; i++) {
+      let prev = dp[0]
+      dp[0] = i
+      for (let j = 1; j <= b.length; j++) {
+        const temp = dp[j]
+        if (a.charCodeAt(i - 1) === b.charCodeAt(j - 1)) {
+          dp[j] = prev
+        } else {
+          dp[j] = Math.min(prev + 1, dp[j] + 1, dp[j - 1] + 1)
+        }
+        prev = temp
+      }
+    }
+
+    return dp[b.length]
+  }
+
   invoke(
     options: vscode.LanguageModelToolInvocationOptions<GetProvenanceInput>,
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.LanguageModelToolResult> {
     const query = options.input.specimenName.toLowerCase()
     const specimens = this.registry.list()
-    const match = specimens.find(
+    const matches = specimens.filter(
       (s) => s.name.toLowerCase().includes(query) || s.uri.toLowerCase().includes(query),
     )
 
-    if (!match) {
-      return makeTextResult(
-        `No specimen found matching "${options.input.specimenName}". Use the wetlab_listSpecimens tool to see all registered specimens.`,
-      )
+    if (matches.length === 0) {
+      const suggestions = this.suggestSpecimens(query, specimens)
+      let message = `No specimen found matching "${options.input.specimenName}". Use the wetlab_listSpecimens tool to see all registered specimens.`
+      if (suggestions.length > 0) {
+        message += `\n\nDid you mean:\n${suggestions.map((s) => `- ${s}`).join('\n')}`
+      }
+      return makeTextResult(message)
     }
 
+    if (matches.length > 1) {
+      const header =
+        `Multiple specimens match "${options.input.specimenName}". ` +
+        'Please refine your query or use the wetlab_listSpecimens tool to see details.\n'
+      const list = matches
+        .map((s) => `- ${s.name} (${s.uri})`)
+        .join('\n')
+      return makeTextResult(`${header}\n${list}`)
+    }
+
+    const match = matches[0]
     const lines: string[] = [
       `📊 Provenance Chain: ${match.name}`,
       '─'.repeat(60),
